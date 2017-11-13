@@ -2,6 +2,7 @@
          use explicit
          use extract
          use BC
+         use vtk_io
          implicit none
          real(kind=8) :: time_start,time_end
          real(kind=8),parameter::zero=0.d0
@@ -142,6 +143,12 @@
          write(*,100) it, U_dt%values(6,:)
          100 format ('Time step ', I4 ,' .Disp is ', 2F12.6)
          enddo
+         !allocate(character(len=len('disp_stress'::title)
+         title = 'disp_stress.vtk'
+         open(unit=1,file=title, status='replace')
+         call vtk_sig_write(1,title,node_nums,element_nums,&
+               element_order, node_data,element_data,U_dt,sig)
+         close(1)
          call cpu_time(time_end)
 
          print*, 'Running time is: ', time_end-time_start
