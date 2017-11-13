@@ -34,8 +34,22 @@
                               BC_dimension      = 8,  &
                               force_dimension   = 8,  &              
                               crack_dimension   = 8
+         real(kind=8), dimension(4,2)::node
+         integer,dimension(1,4)::en 
 
       contains 
+      
+         subroutine element_info(el_id,element_data,node_data,en,node)
+            integer,intent(in)::el_id
+            type(node_type),intent(in)::node_data
+            type(element_type),intent(in)::element_data
+            integer,dimension(1,4),intent(out)::en
+            real(kind=8),dimension(4,2),intent(out)::node
+
+            en(1,1:4)  =element_data%vertex(el_id,1:4)
+            node = node_data%coord(en(1,1:4),1:2)
+         end subroutine element_info
+
          subroutine change_shape(BC_data,BC_nums,force_data,&
                      force_nums,new_BC_data,new_force_data)
             integer,intent(inout)::BC_nums,force_nums
