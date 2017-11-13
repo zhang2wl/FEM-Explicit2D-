@@ -1,15 +1,11 @@
       program main
-         use connectivity
-         use parameters
-         use element
          use explicit
+         use extract
          use BC
          implicit none
          real(kind=8) :: time_start,time_end
          real(kind=8),parameter::zero=0.d0
-         integer::i,intp,num_Gauss_points,ii,j
-         real(kind=8),dimension(8,1)::U_el,F_el
-         real(kind=8),dimension(8,8)::K_el_int, K_el
+         integer::i,num_Gauss_points,ii,j
          real(kind=8),dimension(8,3)::temp1
          call cpu_time(time_start)
 !         
@@ -40,8 +36,9 @@
          call initialize(U,V,A,U_dt,V_dt,A_dt,R_int,node_nums)
          call initialize_A_temp(A_temp,node_nums)
          call initialize_external_force(R_ext,node_nums)
+         call initialize_stress_strain(sig,eps,node_nums)
          do it = 1,NT 
-            print*, 'this is cycle',it
+         !   print*, 'this is cycle',it
             R_int = zero 
            ! print*, new_force_data,force_nums
             call get_external_force(new_force_data,force_nums,node_nums,&
@@ -68,6 +65,7 @@
 
          do i=1,element_nums
              call element_info(i,element_data,node_data,en,node)
+             call get_deformed_node_coord(node,en,U_dt)
              U_el(1:7:2,1) = U_dt%values(en(1,1:4),1)
              U_el(2:8:2,1) = U_dt%values(en(1,1:4),2)
              K_el(:,:) = zero 
@@ -94,6 +92,8 @@
 !                   write(*,'(3F10.4)') (temp1(ii,j),j=1,3)
 !                enddo
 !               endif
+               call get_strain(eps,U_el,B,en,intp)
+               call get_stress(sig,eps,mat_mtx,en,intp)
              enddo
              call dgemv('n',8,8,1.d0,K_el,8,U_el,1,0.d0,F_el,1)
              if (i==2) then
@@ -124,6 +124,7 @@
 !               write(*,*) U_el
              endif
              call assemble_internal_force(F_el,R_int,node_nums,en)
+
         enddo
          !print*,'size of R_int is',size(R_int)
          !do ii=1,node_nums
@@ -133,11 +134,13 @@
          !do ii=1,2*node_nums
          !!    write(*,*) A_temp(ii)
          !enddo
- 
+         call extrapolate_stress_to_node(sig,node_nums)
+          
          A_dt%values(:,1) = A_temp(1:2*node_nums-1:2)
          A_dt%values(:,2) = A_temp(2:2*node_nums:2)
-         write(*,'(2F12.5)') U_dt%values(6,:)
          ! print*, R_ext(1:5)
+         write(*,100) it, U_dt%values(6,:)
+         100 format ('Time step ', I4 ,' .Disp is ', 2F12.6)
          enddo
          call cpu_time(time_end)
 

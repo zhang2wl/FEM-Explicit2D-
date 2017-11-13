@@ -16,6 +16,7 @@
             
             U_dt%values(BC_data,1:2) = zero
 
+            U_dt%values(force_data,1) =  disp/10/NT*it
             U_dt%values(force_data,2) =  disp/NT*it
 !            print*, disp/NT*it
 !            print*, U_dt%values(force_data,2)

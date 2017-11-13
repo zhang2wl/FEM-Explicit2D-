@@ -1,17 +1,20 @@
       module element
       use connectivity
+      use initialization
       implicit none
          real(kind=8),dimension(1,2)::gauss
-         real(kind=8),dimension(4,2)::node,Gauss_4
+         real(kind=8),dimension(4,2)::Gauss_4
          real(kind=8),dimension(2,2)::jaco,inv_J
          real(kind=8),dimension(1,4)::N
          real(kind=8),dimension(2,4)::N_ab,N_xy
          real(kind=8),dimension(3,8)::B
          real(kind=8),dimension(8,3)::B_trans
          real(kind=8)::det_jacobian,area
-         integer,dimension(1,4)::en
          real(kind=8),dimension(:),allocatable::Mass
+         real(kind=8),dimension(8,1)::U_el,F_el
+         real(kind=8),dimension(8,8)::K_el_int, K_el
       contains
+
          function Gauss_integration_points() result(Gauss_4)
             real(kind=8),dimension(4,2):: Gauss_4      
          !   integer::i,j
@@ -23,6 +26,16 @@
             Gauss_4 = 1/sqrt(3.0)*Gauss_4
          end function Gauss_integration_points
    
+         subroutine get_deformed_node_coord(node,en,U_dt)
+            real(kind=8),dimension(4,2),intent(inout)::node
+            type(disp_type),intent(in)::U_dt
+            integer,dimension(1,4),intent(in)::en
+            integer,dimension(4)::buffer
+            buffer=en(1,:)
+            node(:,1) = node(:,1) + U_dt%values(buffer,1)
+            node(:,2) = node(:,2) + U_dt%values(buffer,2)
+         end subroutine get_deformed_node_coord
+
          subroutine shape_function(gauss,N)
             real(kind=8),dimension(1,2),intent(in)::gauss
             real(kind=8),dimension(1,4),intent(out)::N
@@ -35,17 +48,6 @@
             N(1,3) = 0.25*(one+a)*(one+b)
             N(1,4) = 0.25*(one-a)*(one+b)
          end subroutine shape_function
-
-         subroutine element_info(el_id,element_data,node_data,en,node)
-            integer,intent(in)::el_id
-            type(node_type),intent(in)::node_data
-            type(element_type),intent(in)::element_data
-            integer,dimension(1,4),intent(out)::en
-            real(kind=8),dimension(4,2),intent(out)::node
-
-            en(1,1:4)  =element_data%vertex(el_id,1:4)
-            node = node_data%coord(en(1,1:4),1:2)
-         end subroutine element_info
 
          function element_area(node) result(area)
             real(kind=8),dimension(4,2),intent(in)::node
@@ -106,14 +108,6 @@
             dphi(2,1:4) = 0.25*(/a-one,-one-a,one+a,one-a/)
             jaco=0.0
             call dgemm('n','n',2,2,4,1.d0,dphi,2,node,4,0.d0,jaco,2)
-!            do j=1,2
-!               do i=1,2
-!                  do k=1,4
-!                  jaco(i,j) = jaco(i,j) + dphi(i,k)*node(k,j) 
-!                  enddo
-!               enddo
-!            enddo
-       !call dgemm('n','n',m,m,m,alpha,amat,m,bmat,m,beta,cmatblas,m)
             det_jacobian = jaco(1,1)*jaco(2,2)-jaco(1,2)*jaco(2,1)
           !  print *, det_jacobian
          end subroutine Jacobian
