@@ -1,9 +1,16 @@
 # FEM-Explicit2D
-This is a simple finite element 2D explicit time integration code. The problem is a square domain with one end. fixed and one end under a dynamic stretch over time. 
+This Fortran 90 code provides a framework of solving dynamic solid mechanics problems. It is not a comprehensive nonlinear FEM solver but only provides information about how I did my FEM parallel programming. 
 
-This is a very draft version. I only made sure the program can run. The immediate next step is:
- 1. To add output subroutines so I can visualize the result in other software like Paraview.
- 2. To add comments to the code (IMPORTANT)
- 3. To organize the subroutines so that the pass of data is more clearer. 
+Features:
+ 1. Providing the element, node, and BC data in LS-DYNA input format (which can be obtained from the free software LS-Prepost), one can obain the displacement, velocity, acceleration and stress over time. 
+ 2. Only 2D quad element is supported at this moment. 
+ 3. MPI is used for parallel computing. Parallization is applied to element internal force (R_int) calculation. Each processor only calculate the R_int vector on a sub-domain, and all the other processors send the R_int to one processor for it to calculate acceleration for the next time step. For the problem tested (10,000 elements), the speed up in the parallalization part is 8 times using 10 processors.
+ 4. An open-source library METIS is used to do domain composition
+ 5. A highly optimized linear algibra library BLAS is used to do some basic linear algibra calculation.
+ 6. vtk format is used to output data to be viewed in Paraview.
 
-At this stage, to run the code, I use gfortran compiler on University of Cincinnati's HPC system Homer. The only library the program uses right now is BLAS. In the short future it will also need to use LAPACK. I am also planning to make the program parallezible in future versions using OpenMP and Open-MPI. It is necessary when the problem becomes big and computationally expensive. 
+Future updates:
+ 1. To optimize the coding style to separate input and computing part.
+ 2. Add nonlinearity to the problem
+ 3. Update the comments
+ 4. Optimize the parallization algorithm if I have time. 
