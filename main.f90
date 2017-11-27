@@ -14,30 +14,30 @@
 !  Author:Wenlong Zhang
 !  Last edit: 11/16/2017
 !     
- program main
-    use mpi
-    use connectivity
-    use explicit !defines U,V,A. assembly R_int, calculates A
-    use extract  !calculate stresses
-    use BC       !applies BC condition
-    use vtk_io   !module to write output
-    use partition 
-    implicit none
-    real(kind=8) :: time1,time2,time3,time4,time5,time6, time7, &
-                    time8,time9,time_start, time_end !variables use
-                    ! for time measurement
-    real(kind=8),parameter::zero=0.d0
-    integer::i,num_Gauss_points ,ierr,j,k,gid,request,send_count, start_id,&
-            status(MPI_STATUS_SIZE),recv_request
-    real(kind=8),dimension(8,3)::temp1 !temp1=trans(B)*mat_mtx
-    type(element_type)::element_data_local 
-    type(node_type)::node_data_local
-    type(disp_type)::U_local, U_dt_local,V_local,V_dt_local,A_local,&
-         A_dt_local
-   real(kind=8),allocatable::R_int_local(:), buffer(:), temp(:)
-   integer,parameter:: big_number = 10000
-   integer:: recv_buffer(big_number), recv_id_buffer(big_number), &
-            local_id(big_number),send_r_int(big_number)
+program main
+   use mpi
+   use connectivity
+   use explicit !defines U,V,A. assembly R_int, calculates A
+   use extract  !calculate stresses
+   use BC       !applies BC condition
+   use vtk_io   !module to write output
+   use partition 
+   implicit none
+   real(kind=8) :: time1,time2,time3,time4,time5,time6, time7, &
+                   time8,time9,time_start, time_end !variables use
+                   ! for time measurement
+   real(kind=8),parameter::zero=0.d0
+   integer::i,num_Gauss_points ,ierr,j,k,gid,request,send_count, start_id,&
+           status(MPI_STATUS_SIZE),recv_request
+   real(kind=8),dimension(8,3)::temp1 !temp1=trans(B)*mat_mtx
+   type(element_type)::element_data_local 
+   type(node_type)::node_data_local
+   type(disp_type)::U_local, U_dt_local,V_local,V_dt_local,A_local,&
+        A_dt_local
+  real(kind=8),allocatable::R_int_local(:), buffer(:), temp(:)
+  integer,parameter:: big_number = 10000
+  integer:: recv_buffer(big_number), recv_id_buffer(big_number), &
+           local_id(big_number),send_r_int(big_number)
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
 !  Initiate MPI
@@ -62,15 +62,22 @@ call get_critical_dt(element_nums, element_data,node_data,&
 call create_mass_matrix(element_data,node_data,node_nums,&
                element_nums,rho,mass)
 NT = get_total_steps(T,dt_cri)
-!
+!!
 !-- Get the shared node between processors and local elements
 !
 call get_shared_node(element_data,element_nums,node_nums, &
         shared_node_local,shared_node,shared_node_size, &
         send_nums,num_local, epart,npart, numprocs,myid)
+print*, 'get_shared_node finished'
 call get_local_element_id(epart, element_nums, numprocs,&
           local_elements,local_nums)
-
+print*, size(local_elements,1)
+if (myid .eq. 0) then
+   do i=1,numprocs
+      print*, local_elements(1:10,i)
+   enddo
+endif
+!print*, local_nums
 !call get_local_node_id(npart,node_nums, numprocs,local_nodes,&
 !         local_node_nums, shared_node,shared_node_size)
 !if (myid .eq. 0 ) then
@@ -98,9 +105,11 @@ print*,'initialized UVA'
 !allocate(element_data_global%element_id(local_nums(myid+1)))
 allocate(element_data_local%element_id(local_nums(myid+1)))
 allocate(element_data_local%vertex(local_nums(myid+1),4))
+print*, 'allocate element_data_local'
 element_data_local%element_id(1:local_nums(myid+1)) = (/(i,i=1,local_nums(myid+1))/)
+print*, 'initialized element local id'
 element_data_local%vertex(1:local_nums(myid+1),:) = &
-   element_data%vertex(local_elements(:,myid+1),1:4)
+   element_data%vertex(local_elements(1:local_nums(myid+1),myid+1),1:4)
 print*, 'initialized local element'
 !element_data_global%element_id = element_data_local%element_id
 !element_data_global%vertex = element_data_global%vertex
@@ -164,6 +173,7 @@ do it = 1,NT
       !print*, U_dt%values(2202:2203,2)
    endif
    call cpu_time(time6)
+!   print*, 'start looping elements'
    do i=1,local_nums(myid+1)
       ! This output en will be local node id
        call element_info(i,element_data_local,node_data, en,node)
@@ -221,7 +231,7 @@ do it = 1,NT
    if (myid .eq. 0) then
       call calculate_acceleration(R_ext,R_int,Mass,node_nums,A_temp)
       !call extrapolate_stress_to_node(sig,node_nums)
-      print*, sig%values(2202,2)
+   !   print*, sig%values(2202,2)
    !--- calculate acceleration    
       A_dt%values(:,1) = A_temp(1:2*node_nums-1:2)
       A_dt%values(:,2) = A_temp(2:2*node_nums:2)
